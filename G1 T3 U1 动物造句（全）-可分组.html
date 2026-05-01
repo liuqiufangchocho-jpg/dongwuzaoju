@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>G1 T3 U1 动物造句 - 竞赛版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --mario-sky: #5C94FC;
+            --mario-grass: #00A800;
+            --mario-dirt: #E76928;
+            --mario-brick: #F83810;
+        }
+
+        body {
+            font-family: "KaiTi", "STKaiti", "楷体", "楷体_GB2312", serif;
+            background-color: var(--mario-sky);
+            margin: 0;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: row; 
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(to bottom, var(--mario-sky) 0%, var(--mario-sky) 70%, var(--mario-grass) 70%, var(--mario-grass) 75%, var(--mario-dirt) 75%);
+        }
+
+        /* 侧边得分栏 */
+        .scoreboard {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 20;
+        }
+
+        .team-block {
+            width: 80px;
+            height: 80px;
+            border-radius: 12px;
+            border: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+            transition: all 0.3s;
+            position: relative;
+            box-shadow: 4px 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .team-yellow { background-color: #FFD700; }
+        .team-green { background-color: #22c55e; }
+        .team-blue { background-color: #3b82f6; }
+        .team-red { background-color: #ef4444; }
+
+        .active-team {
+            outline: 6px solid #a855f7;
+            box-shadow: 0 0 20px #a855f7;
+            transform: scale(1.1);
+            z-index: 30;
+        }
+
+        /* 游戏主面板 */
+        .main-stage {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-left: 100px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.95);
+            border: 6px solid #FFFFFF; 
+            border-radius: 20px;
+            box-shadow: 0px 10px 25px rgba(0,0,0,0.2);
+            z-index: 10;
+            width: 90%; 
+            max-width: 900px;
+            padding: 30px;
+            text-align: center;
+            transform: scale(1.05);
+        }
+
+        .instruction {
+            font-size: 2.5rem;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        /* 槽位区样式 - 纵向拉长 */
+        .slots-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            min-height: 145px; /* 增加最小高度 */
+        }
+
+        .slot {
+            width: 130px; 
+            height: 140px; /* 纵向拉长到140px */
+            border: 3px dashed #888; 
+            border-radius: 12px;
+            background: #eee; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        /* 词块样式 - 纵向拉长 */
+        .word-card {
+            width: 125px; 
+            height: 135px; /* 纵向拉长到135px */
+            background: white;
+            border: 4px solid #FFFFFF; 
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* 从顶部开始排列 */
+            padding-top: 12px; /* 顶部留白，防止拼音贴边 */
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
+            transition: transform 0.1s;
+        }
+
+        /* 答错时的样式 */
+        .card-error {
+            border-color: #ef4444 !important;
+            background-color: #fee2e2 !important;
+        }
+
+        .pinyin {
+            font-size: 1.1rem; 
+            color: #555;
+            line-height: 1.2;
+            margin-bottom: 6px; /* 拼音和汉字之间留空 */
+            white-space: nowrap; 
+        }
+
+        .hanzi {
+            font-size: 2rem;
+            font-weight: bold;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .emoji {
+            font-size: 2.5rem;
+            margin-top: auto; /* 将emoji推到底部附近 */
+            padding-bottom: 8px;
+        }
+
+        /* 选项区 - 词块同步纵向拉长 */
+        .options-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+            margin-top: 40px;
+            z-index: 10;
+            transform: scale(1.05);
+        }
+
+        .btn-mario {
+            background: var(--mario-brick);
+            color: white;
+            padding: 12px 50px;
+            border: 4px solid #FFFFFF;
+            font-size: 1.8rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 0 #800;
+            cursor: pointer;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        @keyframes neon-pulse {
+            from { outline-color: #a855f7; box-shadow: 0 0 10px #a855f7; }
+            to { outline-color: #e879f9; box-shadow: 0 0 25px #e879f9; }
+        }
+        .active-team {
+            animation: neon-pulse 0.8s infinite alternate;
+        }
+
+        .floor-deco {
+            position: absolute;
+            bottom: 25%;
+            width: 100%;
+            height: 20px;
+            background-image: linear-gradient(90deg, rgba(255,255,255,0.3) 2px, transparent 2px);
+            background-size: 60px 100%;
+            opacity: 0.2;
+        }
+
+        /* 禁止点击遮罩 */
+        .pointer-none {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container" id="game">
+    <div class="scoreboard">
+        <div id="team-0" class="team-block team-yellow active-team">0</div>
+        <div id="team-1" class="team-block team-green">0</div>
+        <div id="team-2" class="team-block team-blue">0</div>
+        <div id="team-3" class="team-block team-red">0</div>
+    </div>
+
+    <div class="main-stage">
+        <div class="panel">
+            <div class="instruction" id="english-instruction">"This is a cat."</div>
+            <div class="slots-container" id="slots"></div>
+            <div id="feedback" class="text-4xl font-bold h-12 mb-4"></div>
+            <button class="btn-mario hidden" id="next-btn" onclick="nextLevel()">下一个</button>
+        </div>
+        <div class="options-container" id="options"></div>
+    </div>
+    <div class="floor-deco"></div>
+</div>
+
+<script>
+    const dictionary = {
+        "这": { pinyin: "zhè", emoji: "👇" },
+        "是": { pinyin: "shì", emoji: "👍" },
+        "不是": { pinyin: "bú shì", emoji: "❌" },
+        "猫": { pinyin: "māo", emoji: "🐱" },
+        "鸟": { pinyin: "niǎo", emoji: "🐦" },
+        "鱼": { pinyin: "yú", emoji: "🐟" },
+        "马": { pinyin: "mǎ", emoji: "🐎" },
+        "狗": { pinyin: "gǒu", emoji: "🐶" },
+        "熊猫": { pinyin: "xióng māo", emoji: "🐼" },
+        "骆驼": { pinyin: "luò tuó", emoji: "🐫" },
+        "老虎": { pinyin: "lǎo hǔ", emoji: "🐯" },
+        "羊": { pinyin: "yáng", emoji: "🐑" },
+        "牛": { pinyin: "niú", emoji: "🐮" }
+    };
+
+    let originalLevels = [
+        { en: '"This is a cat."', zh: ["这", "是", "猫"] },
+        { en: '"This is not a cat."', zh: ["这", "不是", "猫"] },
+        { en: '"This is a panda."', zh: ["这", "是", "熊猫"] },
+        { en: '"This is not a dog."', zh: ["这", "不是", "狗"] },
+        { en: '"This is a tiger."', zh: ["这", "是", "老虎"] },
+        { en: '"This is not a bird."', zh: ["这", "不是", "鸟"] },
+        { en: '"This is a horse."', zh: ["这", "是", "马"] }
+    ];
+
+    let levels = [...originalLevels].sort(() => 0.5 - Math.random());
+    let currentLevelIndex = 0;
+    let userSelection = [];
+    let currentTeam = 0;
+    let scores = [0, 0, 0, 0];
+    let isLevelComplete = false;
+
+    function initLevel() {
+        const level = levels[currentLevelIndex];
+        document.getElementById('english-instruction').innerText = level.en;
+        
+        userSelection = [];
+        isLevelComplete = false;
+        document.getElementById('feedback').innerText = "";
+        document.getElementById('next-btn').classList.add('hidden');
+        document.getElementById('options').classList.remove('pointer-none');
+        
+        renderSlots(level.zh.length);
+        renderOptions();
+        updateTeamDisplay();
+    }
+
+    function updateTeamDisplay() {
+        for(let i=0; i<4; i++) {
+            const el = document.getElementById(`team-${i}`);
+            el.innerText = scores[i];
+            if(i === currentTeam) el.classList.add('active-team');
+            else el.classList.remove('active-team');
+        }
+    }
+
+    function renderSlots(count) {
+        const container = document.getElementById('slots');
+        container.innerHTML = '';
+        for (let i = 0; i < count; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'slot';
+            slot.id = `slot-${i}`;
+            slot.onclick = () => { if(!isLevelComplete) removeWord(i); };
+            container.appendChild(slot);
+        }
+    }
+
+    function renderOptions() {
+        const container = document.getElementById('options');
+        container.innerHTML = '';
+        const level = levels[currentLevelIndex];
+        const correctAnimals = level.zh.filter(w => !["这", "是", "不是"].includes(w));
+        const allAnimals = ["猫", "鸟", "鱼", "马", "狗", "熊猫", "骆驼", "老虎", "羊", "牛"];
+        
+        const distractorAnimals = allAnimals.filter(a => !correctAnimals.includes(a))
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 2);
+        const animalOptions = [...correctAnimals, ...distractorAnimals];
+        const fixedWords = ["这", "是", "不是"];
+        const gameWords = [...fixedWords, ...animalOptions].sort(() => 0.5 - Math.random());
+
+        gameWords.forEach(word => {
+            const card = createWordCard(word);
+            card.onclick = () => { if(!isLevelComplete) selectWord(word); };
+            container.appendChild(card);
+        });
+    }
+
+    function createWordCard(word) {
+        const data = dictionary[word];
+        const div = document.createElement('div');
+        div.className = 'word-card';
+        div.innerHTML = `
+            <div class="pinyin">${data.pinyin}</div>
+            <div class="hanzi">${word}</div>
+            <div class="emoji">${data.emoji}</div>
+        `;
+        return div;
+    }
+
+    function selectWord(word) {
+        const level = levels[currentLevelIndex];
+        if (userSelection.length < level.zh.length) {
+            userSelection.push(word);
+            updateSlots();
+            if (userSelection.length === level.zh.length) {
+                checkResult();
+            }
+        }
+    }
+
+    function removeWord(index) {
+        if (userSelection[index]) {
+            userSelection.splice(index, 1);
+            updateSlots();
+        }
+    }
+
+    function updateSlots() {
+        const level = levels[currentLevelIndex];
+        for (let i = 0; i < level.zh.length; i++) {
+            const slot = document.getElementById(`slot-${i}`);
+            slot.innerHTML = '';
+            if (userSelection[i]) {
+                const card = createWordCard(userSelection[i]);
+                slot.appendChild(card);
+                slot.style.border = "3px solid #FFFFFF";
+                slot.style.background = "white";
+            } else {
+                slot.style.border = "3px dashed #888";
+                slot.style.background = "#eee";
+            }
+        }
+    }
+
+    function checkResult() {
+        isLevelComplete = true;
+        document.getElementById('options').classList.add('pointer-none');
+        const level = levels[currentLevelIndex];
+        const feedback = document.getElementById('feedback');
+        const isCorrect = userSelection.every((word, index) => word === level.zh[index]);
+        
+        document.getElementById('next-btn').classList.remove('hidden');
+
+        if (isCorrect) {
+            feedback.innerText = "🌟 太棒了! 🌟";
+            feedback.className = "text-green-600 font-bold text-4xl";
+            scores[currentTeam]++;
+            updateTeamDisplay();
+            triggerConfetti();
+        } else {
+            feedback.innerText = "😢"; 
+            feedback.className = "text-4xl";
+            userSelection.forEach((_, i) => {
+                const slot = document.getElementById(`slot-${i}`);
+                if (slot.firstChild) slot.firstChild.classList.add('card-error');
+            });
+        }
+    }
+
+    function nextLevel() {
+        currentTeam = (currentTeam + 1) % 4;
+        currentLevelIndex++;
+        if (currentLevelIndex >= levels.length) {
+            levels = [...originalLevels].sort(() => 0.5 - Math.random());
+            currentLevelIndex = 0;
+        }
+        initLevel();
+    }
+
+    function triggerConfetti() {
+        const game = document.getElementById('game');
+        for(let i=0; i<35; i++) {
+            const p = document.createElement('div');
+            p.style.position = 'absolute';
+            p.style.width = '12px';
+            p.style.height = '12px';
+            p.style.backgroundColor = ['#ff0', '#f0f', '#0ff', '#fff', '#f00', '#0f0'][Math.floor(Math.random()*6)];
+            p.style.left = '50%';
+            p.style.top = '40%';
+            p.style.zIndex = '100';
+            p.style.borderRadius = '3px';
+            game.appendChild(p);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 180 + Math.random() * 350;
+            const tx = Math.cos(angle) * dist;
+            const ty = Math.sin(angle) * dist;
+            
+            p.animate([
+                { transform: 'translate(0,0) rotate(0deg)', opacity: 1 },
+                { transform: `translate(${tx}px, ${ty}px) rotate(1080deg)`, opacity: 0 }
+            ], { duration: 1500, easing: 'ease-out' }).onfinish = () => p.remove();
+        }
+    }
+
+    window.onload = initLevel;
+</script>
+
+</body>
+</html>
